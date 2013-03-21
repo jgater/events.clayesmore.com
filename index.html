@@ -55,38 +55,46 @@
 
 		<div class="row-fluid">
 			<form class="form-horizontal">
+
+				<div class="control-group">
+					<label class="control-label" for="inputSummary">Event summary</label>
+					<div class="controls">
+						<input id="inputSummary" data-bind="value: inputObj.summary" rel="pop" data-content="Add a short summary or title for the upcoming event"/>
+					</div>
+				</div>
+
 				<div class="control-group">
 					<label class="control-label" for="inputStartDate">Event date</label>
 					<div class="controls">
-						<input id="inputStartDate" data-bind="kendoDatePicker: eventStartDate" />
+						<input id="inputStartDate" data-bind="kendoDatePicker: inputObj.startDate" rel="pop" data-content="click the small calendar to help you pick the event date"/>
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputStartTime">Start time</label>
 					<div class="controls">
-						<input id="inputStartTime" data-bind="kendoTimePicker: eventStartTime" />
+						<input id="inputStartTime" data-bind="kendoTimePicker: inputObj.startTime" rel="pop" data-content="The time when the event starts for pupils"/>
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputEndTime">End time</label>
 					<div class="controls">
-						<input id="inputEndTime" data-bind="kendoTimePicker: eventEndTime" />
+						<input id="inputEndTime" data-bind="kendoTimePicker: inputObj.endTime" rel="pop" data-content="The time when the event finishes for pupils"/>
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputCollectionTime">Collection time</label>
 					<div class="controls">
-						<input id="inputCollectionTime" data-bind="kendoTimePicker: eventCollectionTime" /> 
+						<input id="inputCollectionTime" data-bind="kendoTimePicker: inputObj.collectionTime" rel="pop" data-content="The time when pupils will be ready for collection"/> 
 					</div>
 				</div>
 
 				<div class="control-group">
-					<label class="control-label" for="inputDescription">Description</label>
+					<label class="control-label" for="inputDescription">Description (optional)</label>
 					<div class="controls">
-						<textarea id="inputDescription" rows="5" cols="40" data-bind="value: eventDescription"></textarea> 
+						<textarea id="inputDescription" rows="5" cols="40" data-bind="value: inputObj.description" rel="pop" data-content="A fuller description of what will happen at the event"></textarea> 
 					</div>
 				</div>
 
@@ -100,12 +108,17 @@
 		</div>
 
 		<p>test data:</p>
-		<div data-bind="text: eventStartDate"> </div>
-		<div data-bind="text: eventStartTime"> </div>
-		<div data-bind="text: eventEndTime"> </div>
-		<div data-bind="text: eventCollectionTime"> </div>
-		<div data-bind="text: eventDescription"> </div>	
-		
+		<div>raw date: <span data-bind="text: inputObj.startDate"> </span></div>
+		<div>summary: <span data-bind="text: inputObj.summary"> </span></div>
+		<div>google start time: <span data-bind="text: googleObj.startTime"> </span></div>
+		<div>google end time: <span data-bind="text: googleObj.endTime"> </span></div>
+		<div>human start date: <span data-bind="text: humanSummary.startDate"> </span></div>
+		<div>human start time: <span data-bind="text: humanSummary.startTime"> </span></div>
+		<div>human end time: <span data-bind="text: humanSummary.endTime"> </span></div>
+		<div>human collection time: <span data-bind="text: humanSummary.collectionTime"> </span></div>
+
+		<div>description: <span data-bind="text: inputObj.description"> </span></div>	
+
 	</div> <!-- /container -->
 
 
@@ -114,25 +127,70 @@
 	<script src="//cdn.kendostatic.com/2012.3.1114/js/cultures/kendo.culture.en-GB.min.js"></script>
 	<script src="//ajax.aspnetcdn.com/ajax/knockout/knockout-2.2.1.js"></script>
 	<script src="js/knockout-kendo.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
 	<script>
 		//set current to the "en-GB" culture script
 		kendo.culture("en-GB");
+
+		$( document ).ready(function() {
+			$('[rel=pop]').popover({container: 'body', trigger: 'focus hover', placement: 'top'});
+		});
+
 		var ViewModel = function() {
-			this.today = new Date();
-			this.eventStartDate = ko.observable(this.today);
-			this.eventStartTime = ko.observable(this.today);
-			this.eventEndTime = ko.observable(this.today);
-			this.eventCollectionTime = ko.observable(this.today);
-			this.eventDescription = ko.observable();
+			var self = this;
+			self.today = new Date();
+			self.inputObj = {
+				summary: ko.observable(),
+				startDate: ko.observable(self.today),
+				startTime: ko.observable(self.today),
+				endTime: ko.observable(self.today),
+				collectionTime: ko.observable(self.today),
+				description: ko.observable()
+			}
+
+
+			var googleDate = function(date, time) {
+				var pad = function(n) {return n<10 ? '0'+n : n};
+				//date-fullyear "-" date-month "-" date-mday "T" time-hour ":" time-minute ":" time-second 
+				var out = "" + date.getUTCFullYear() + "-" + pad(date.getUTCMonth()+1) + "-" + pad(date.getUTCDate()) + "T" + pad(time.getUTCHours()) + ":" + pad(time.getUTCMinutes()) + ":00";
+				return out;
+			};
+
+			var shortTime = function (time) {
+				var localTime = time.toLocaleTimeString();
+				var n = localTime.lastIndexOf(":");
+				return localTime.substring(0,n);
+			};
+
+			self.googleObj = {
+				startTime: ko.computed(function(){return googleDate(self.inputObj.startDate(), self.inputObj.startTime())}) ,
+				endTime: ko.computed(function(){return googleDate(self.inputObj.startDate(), self.inputObj.endTime())})
+			}
+
+
+
+			self.humanSummary = {
+				startDate: ko.computed(function(){return self.inputObj.startDate().toLocaleDateString();}) ,
+				startTime: ko.computed(function(){return shortTime(self.inputObj.startTime());}) ,
+				endTime: ko.computed(function(){return shortTime(self.inputObj.endTime());}) ,
+				collectionTime: ko.computed(function(){return shortTime(self.inputObj.collectionTime());})
+			}
+
+		};
+
+		ko.bindingHandlers.kendoDatePicker.options = {
+			min: new Date(),
+			max: new Date(2049, 11, 31, 23, 30, 0)
 		};
 
 		ko.bindingHandlers.kendoTimePicker.options = {
-    	min: new Date(2013, 0, 1, 6, 0, 0),
-    	max: new Date(2049, 11, 31, 23, 30, 0)
+			min: new Date(2013, 0, 1, 6, 0, 0),
+			max: new Date(2049, 11, 31, 23, 30, 0)
 		};
 
 		ko.applyBindings(new ViewModel());
 
 	</script>
+
 </body>
 </html>
