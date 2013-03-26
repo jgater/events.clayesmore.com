@@ -54,19 +54,19 @@
 		<hr>
 
 		<div class="row-fluid">
-			<form class="form-horizontal">
+			<form class="form-horizontal" data-bind="submit: formSubmit" id="eventsForm">
 
 				<div class="control-group">
 					<label class="control-label" for="inputSummary">Event summary</label>
 					<div class="controls">
-						<input id="inputSummary" data-bind="value: inputObj.summary" rel="pop" data-content="Add a short summary or title for the upcoming event"/>
+						<input id="inputSummary" data-bind="value: inputObj.summary" rel="pop" data-content="Add a short summary or title for the upcoming event" />
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputStartDate">Event date</label>
 					<div class="controls">
-						<input id="inputStartDate" data-bind="kendoDatePicker: inputObj.startDate" rel="pop" data-content="click the small calendar to help you pick the event date"/>
+						<input id="inputStartDate" data-bind="kendoDatePicker: inputObj.startDate" rel="pop" data-content="click the small calendar icon to help you pick the event date"/>
 					</div>
 				</div>
 
@@ -85,9 +85,9 @@
 				</div>
 
 				<div class="control-group">
-					<label class="control-label" for="inputCollectionTime">Collection time</label>
+					<label class="control-label" for="inputCollectionTime">Collection time (optional)</label>
 					<div class="controls">
-						<input id="inputCollectionTime" data-bind="kendoTimePicker: inputObj.collectionTime" rel="pop" data-content="The time when pupils will be ready for collection"/> 
+						<input id="inputCollectionTime" data-bind="kendoTimePicker: inputObj.collectionTime" rel="pop" data-content="The time when pupils will be ready for collection by parents"/> 
 					</div>
 				</div>
 
@@ -95,6 +95,12 @@
 					<label class="control-label" for="inputDescription">Description (optional)</label>
 					<div class="controls">
 						<textarea id="inputDescription" rows="5" cols="40" data-bind="value: inputObj.description" rel="pop" data-content="A fuller description of what will happen at the event"></textarea> 
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="controls">
+						<button id="submit" type="submit" class="btn btn-primary">Submit event</button>
 					</div>
 				</div>
 
@@ -107,15 +113,34 @@
 			<p>&copy; Clayesmore School 2013</p>
 		</div>
 
+		<div id="submitModal" class="modal hide fade" tabindex="-1" role="dialog">
+  		<div class="modal-header">
+  		  <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+  		  <h3>Add this event to the school calendar?</h3>
+  		</div>
+  		<div class="modal-body">
+  			<p>
+
+  			<div>Summary: <span data-bind="text: humanSummary.summary"> </span></div>
+  		  <div>Date: <span data-bind="text: humanSummary.startDate"> </span></div>
+				<div>Start time: <span data-bind="text: humanSummary.startTime"> </span></div>
+				<div>End time: <span data-bind="text: humanSummary.endTime"> </span></div>
+				<div data-bind="visible: humanSummary.collectionTime">Collection time: <span data-bind="text: humanSummary.collectionTime"> </span></div>
+				<div data-bind="visible: humanSummary.description">Description: <span data-bind="text: humanSummary.description"> </span></div>
+				<p>
+  		</div>
+  		<div class="modal-footer">
+  		  <a href="#" class="btn" data-dismiss="modal">Cancel</a>
+  		  <a href="#" class="btn btn-primary">Add event</a>
+  		</div>
+		</div>
+
 		<p>test data:</p>
 		<div>raw date: <span data-bind="text: inputObj.startDate"> </span></div>
 		<div>summary: <span data-bind="text: inputObj.summary"> </span></div>
 		<div>google start time: <span data-bind="text: googleObj.startTime"> </span></div>
 		<div>google end time: <span data-bind="text: googleObj.endTime"> </span></div>
-		<div>human start date: <span data-bind="text: humanSummary.startDate"> </span></div>
-		<div>human start time: <span data-bind="text: humanSummary.startTime"> </span></div>
-		<div>human end time: <span data-bind="text: humanSummary.endTime"> </span></div>
-		<div>human collection time: <span data-bind="text: humanSummary.collectionTime"> </span></div>
+		
 
 		<div>description: <span data-bind="text: inputObj.description"> </span></div>	
 
@@ -127,14 +152,11 @@
 	<script src="//cdn.kendostatic.com/2012.3.1114/js/cultures/kendo.culture.en-GB.min.js"></script>
 	<script src="//ajax.aspnetcdn.com/ajax/knockout/knockout-2.2.1.js"></script>
 	<script src="js/knockout-kendo.min.js"></script>
+	<script src="js/knockout.validation.min.js"></script>
 	<script src="js/bootstrap.min.js"></script>
 	<script>
 		//set current to the "en-GB" culture script
 		kendo.culture("en-GB");
-
-		$( document ).ready(function() {
-			$('[rel=pop]').popover({container: 'body', trigger: 'focus hover', placement: 'top'});
-		});
 
 		var ViewModel = function() {
 			var self = this;
@@ -144,7 +166,7 @@
 				startDate: ko.observable(self.today),
 				startTime: ko.observable(self.today),
 				endTime: ko.observable(self.today),
-				collectionTime: ko.observable(self.today),
+				collectionTime: ko.observable(),
 				description: ko.observable()
 			}
 
@@ -152,7 +174,7 @@
 			var googleDate = function(date, time) {
 				var pad = function(n) {return n<10 ? '0'+n : n};
 				//date-fullyear "-" date-month "-" date-mday "T" time-hour ":" time-minute ":" time-second 
-				var out = "" + date.getUTCFullYear() + "-" + pad(date.getUTCMonth()+1) + "-" + pad(date.getUTCDate()) + "T" + pad(time.getUTCHours()) + ":" + pad(time.getUTCMinutes()) + ":00";
+				var out = "" + date.getFullYear() + "-" + pad(date.getMonth()+1) + "-" + pad(date.getDate()) + "T" + pad(time.getHours()) + ":" + pad(time.getMinutes()) + ":00";
 				return out;
 			};
 
@@ -170,11 +192,18 @@
 
 
 			self.humanSummary = {
+				summary: ko.computed(function(){return self.inputObj.summary();}) ,
 				startDate: ko.computed(function(){return self.inputObj.startDate().toLocaleDateString();}) ,
 				startTime: ko.computed(function(){return shortTime(self.inputObj.startTime());}) ,
 				endTime: ko.computed(function(){return shortTime(self.inputObj.endTime());}) ,
-				collectionTime: ko.computed(function(){return shortTime(self.inputObj.collectionTime());})
+				collectionTime: ko.computed(function(){ return self.inputObj.collectionTime() ? shortTime(self.inputObj.collectionTime()) : null; }) ,
+				description: ko.computed(function(){return self.inputObj.description() ? self.inputObj.description() : null ; })
 			}
+
+			self.formSubmit = function(formElement) {
+      	$('#submitModal').modal();
+      };
+
 
 		};
 
@@ -188,7 +217,11 @@
 			max: new Date(2049, 11, 31, 23, 30, 0)
 		};
 
-		ko.applyBindings(new ViewModel());
+
+		$( document ).ready(function() {
+			$('[rel=pop]').popover({container: 'body', trigger: 'focus hover', placement: 'top'});
+			ko.applyBindings(new ViewModel());
+		});
 
 	</script>
 
