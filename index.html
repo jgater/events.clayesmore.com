@@ -59,48 +59,48 @@
 				<div class="control-group">
 					<label class="control-label" for="inputSummary">Event summary</label>
 					<div class="controls">
-						<input id="inputSummary" data-bind="value: inputObj.summary" rel="pop" data-content="Add a short summary or title for the upcoming event" />
+						<input id="inputSummary" data-bind="value: inputObj().summary, valueUpdate: 'afterkeydown'" rel="pop" data-content="Add a short summary or title for the upcoming event" />
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputStartDate">Event date</label>
 					<div class="controls">
-						<input id="inputStartDate" data-bind="kendoDatePicker: inputObj.startDate" rel="pop" data-content="click the small calendar icon to help you pick the event date"/>
+						<input id="inputStartDate" data-bind="kendoDatePicker: inputObj().startDate" rel="pop" data-content="click the small calendar icon to help you pick the event date"/>
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputStartTime">Start time</label>
 					<div class="controls">
-						<input id="inputStartTime" data-bind="kendoTimePicker: inputObj.startTime" rel="pop" data-content="The time when the event starts for pupils"/>
+						<input id="inputStartTime" data-bind="kendoTimePicker: inputObj().startTime" rel="pop" data-content="The time when the event starts for pupils"/>
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputEndTime">End time</label>
 					<div class="controls">
-						<input id="inputEndTime" data-bind="kendoTimePicker: inputObj.endTime" rel="pop" data-content="The time when the event finishes for pupils"/>
+						<input id="inputEndTime" data-bind="kendoTimePicker: inputObj().endTime" rel="pop" data-content="The time when the event finishes for pupils"/>
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputCollectionTime">Collection time (optional)</label>
 					<div class="controls">
-						<input id="inputCollectionTime" data-bind="kendoTimePicker: inputObj.collectionTime" rel="pop" data-content="The time when pupils will be ready for collection by parents"/> 
+						<input id="inputCollectionTime" data-bind="kendoTimePicker: inputObj().collectionTime" rel="pop" data-content="The time when pupils will be ready for collection by parents"/> 
 					</div>
 				</div>
 
 				<div class="control-group">
 					<label class="control-label" for="inputDescription">Description (optional)</label>
 					<div class="controls">
-						<textarea id="inputDescription" rows="5" cols="40" data-bind="value: inputObj.description" rel="pop" data-content="A fuller description of what will happen at the event"></textarea> 
+						<textarea id="inputDescription" rows="5" cols="40" data-bind="value: inputObj().description" rel="pop" data-content="A fuller description of what will happen at the event"></textarea> 
 					</div>
 				</div>
 
 				<div class="control-group">
 					<div class="controls">
-						<button id="submit" type="submit" class="btn btn-primary">Submit event</button>
+						<button id="submit" type="submit" class="btn" data-bind="enable:inputObj.isValid()">Submit event</button>
 					</div>
 				</div>
 
@@ -120,7 +120,6 @@
   		</div>
   		<div class="modal-body">
   			<p>
-
   			<div>Summary: <span data-bind="text: humanSummary.summary"> </span></div>
   		  <div>Date: <span data-bind="text: humanSummary.startDate"> </span></div>
 				<div>Start time: <span data-bind="text: humanSummary.startTime"> </span></div>
@@ -136,13 +135,13 @@
 		</div>
 
 		<p>test data:</p>
-		<div>raw date: <span data-bind="text: inputObj.startDate"> </span></div>
-		<div>summary: <span data-bind="text: inputObj.summary"> </span></div>
+		<div>raw date: <span data-bind="text: inputObj().startDate"> </span></div>
+		<div>summary: <span data-bind="text: inputObj().summary"> </span></div>
 		<div>google start time: <span data-bind="text: googleObj.startTime"> </span></div>
 		<div>google end time: <span data-bind="text: googleObj.endTime"> </span></div>
 		
 
-		<div>description: <span data-bind="text: inputObj.description"> </span></div>	
+		<div>description: <span data-bind="text: inputObj().description"> </span></div>	
 
 	</div> <!-- /container -->
 
@@ -161,14 +160,15 @@
 		var ViewModel = function() {
 			var self = this;
 			self.today = new Date();
-			self.inputObj = {
-				summary: ko.observable(),
-				startDate: ko.observable(self.today),
-				startTime: ko.observable(self.today),
-				endTime: ko.observable(self.today),
+			self.inputObj = ko.validatedObservable({
+				summary: ko.observable().extend({ required: true }),
+				startDate: ko.observable(self.today).extend({ required: true }),
+				startTime: ko.observable(self.today).extend({ required: true }),
+				endTime: ko.observable(self.today).extend({ required: true }),
 				collectionTime: ko.observable(),
 				description: ko.observable()
-			}
+			});
+
 
 
 			var googleDate = function(date, time) {
@@ -185,19 +185,19 @@
 			};
 
 			self.googleObj = {
-				startTime: ko.computed(function(){return googleDate(self.inputObj.startDate(), self.inputObj.startTime())}) ,
-				endTime: ko.computed(function(){return googleDate(self.inputObj.startDate(), self.inputObj.endTime())})
+				startTime: ko.computed(function(){return (self.inputObj().startDate() && self.inputObj().startTime()) ? googleDate(self.inputObj().startDate(), self.inputObj().startTime()) : null; }) ,
+				endTime: ko.computed(function(){return (self.inputObj().startDate() && self.inputObj().endTime()) ? googleDate(self.inputObj().startDate(), self.inputObj().endTime()) : null; })
 			}
 
 
 
 			self.humanSummary = {
-				summary: ko.computed(function(){return self.inputObj.summary();}) ,
-				startDate: ko.computed(function(){return self.inputObj.startDate().toLocaleDateString();}) ,
-				startTime: ko.computed(function(){return shortTime(self.inputObj.startTime());}) ,
-				endTime: ko.computed(function(){return shortTime(self.inputObj.endTime());}) ,
-				collectionTime: ko.computed(function(){ return self.inputObj.collectionTime() ? shortTime(self.inputObj.collectionTime()) : null; }) ,
-				description: ko.computed(function(){return self.inputObj.description() ? self.inputObj.description() : null ; })
+				summary: ko.computed(function(){return self.inputObj().summary();}) ,
+				startDate: ko.computed(function(){return self.inputObj().startDate() ? self.inputObj().startDate().toLocaleDateString() : null; }) ,
+				startTime: ko.computed(function(){return self.inputObj().startTime() ? shortTime(self.inputObj().startTime()) : null; }) ,
+				endTime: ko.computed(function(){return self.inputObj().endTime() ? shortTime(self.inputObj().endTime()) : null; }) ,
+				collectionTime: ko.computed(function(){ return self.inputObj().collectionTime() ? shortTime(self.inputObj().collectionTime()) : null; }) ,
+				description: ko.computed(function(){return self.inputObj().description() ? self.inputObj().description() : null; })
 			}
 
 			self.formSubmit = function(formElement) {
